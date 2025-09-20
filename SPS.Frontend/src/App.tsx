@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.tsx';
 
 function App() {
-  const { token, logout } = useAuth();
+  const { token, logout, showSessionModal, sessionCountdown, extendSession } = useAuth(); // Destructure new session states and functions
   const navigate = useNavigate();
   const [accessFileToken, setAccessFileToken] = useState('');
   const [showErrorModal, setShowErrorModal] = useState(false); // New state for error modal visibility
@@ -88,7 +88,7 @@ function App() {
         <div style={{ display: 'flex', justifyContent: 'center', gap: '2.5rem', flexWrap: 'wrap', maxWidth: '1100px', margin: '0 auto', padding: '0 1rem' }}>
           <div style={{ flex: '1 1 300px', padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', backgroundColor: 'var(--dark-background)' }}>
             <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}>1. Upload Securely</h3>
-            <p style={{ color: 'var(--light-text-color)' }}>Your documents are uploaded to Azure Blob Storage with encryption at rest, and are accessed only via time-limited, secret-protected links.</p>
+            <p style={{ color: 'var(--light-text-color)' }}>Your documents are uploaded to storage with encryption at rest, and are accessed only via time-limited, secret-protected links.</p>
           </div>
           <div style={{ flex: '1 1 300px', padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', backgroundColor: 'var(--dark-background)' }}>
             <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}>2. Share Confidentially</h3>
@@ -96,7 +96,7 @@ function App() {
           </div>
           <div style={{ flex: '1 1 300px', padding: '2rem', border: '1px solid var(--border-color)', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', backgroundColor: 'var(--dark-background)' }}>
             <h3 style={{ color: 'var(--primary-color)', marginBottom: '1rem' }}>3. Print Privately</h3>
-            <p style={{ color: 'var(--light-text-color)' }}>Our Windows Worker Service downloads the file directly from Azure, prints it, and deletes all local copies, ensuring no digital footprint remains on the printing system.</p>
+            <p style={{ color: 'var(--light-text-color)' }}>Our Windows Worker Service downloads the file directly from storage, prints it, and deletes all local copies, ensuring no digital footprint remains on the printing system.</p>
           </div>
         </div>
       </section>
@@ -118,7 +118,7 @@ function App() {
             />
             <button type="submit" className="button-link" style={{ maxWidth: '250px', alignSelf: 'center', backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)' }}>Access File</button>
           </form>
-        </div>
+      </div>
       </section>
 
       <section style={{ padding: '6rem 2rem', textAlign: 'center', backgroundColor: 'var(--dark-background)', color: 'var(--text-color)', width: '100%' }}>
@@ -154,6 +154,32 @@ function App() {
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowErrorModal(false)} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)' }}>OK</button>
+            </div>
+          </div>
+      </div>
+      )}
+      {/* Session Expiry Warning Modal */}
+      {showSessionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="form-card" style={{ maxWidth: '400px', padding: '2rem', backgroundColor: 'var(--card-background)', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: 'var(--primary-color)', marginBottom: '1.5rem' }}>Session About to Expire!</h3>
+            <p style={{ color: 'var(--light-text-color)', marginBottom: '1.5rem' }}>
+              Your session will expire in {sessionCountdown} seconds. Do you want to continue?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <button onClick={logout} className="button-link" style={{ backgroundColor: 'var(--error-color)', color: 'var(--text-color)' }}>Logout</button>
+              <button onClick={extendSession} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)' }}>Continue Session</button>
             </div>
           </div>
         </div>

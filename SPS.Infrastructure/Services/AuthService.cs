@@ -47,4 +47,33 @@ public class AuthService : IAuthService
         var token = _jwtTokenGenerator.GenerateToken(user);
         return new LoginResponse(token);
     }
+
+    public async Task<RefreshTokenResponse> RefreshTokenAsync(RefreshTokenRequest request)
+    {
+        // Validate the expired token to get the principal (user claims)
+        var principal = _jwtTokenGenerator.GetPrincipalFromToken(request.ExpiredToken);
+
+        if (principal == null)
+        {
+            throw new UnauthorizedAccessException("Invalid or expired token for refresh.");
+        }
+
+        var userIdClaim = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+        {
+            throw new UnauthorizedAccessException("User ID not found in token claims.");
+        }
+
+        var user = await _context.Users.FindAsync(userId);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException("User not found.");
+        }
+
+        // Generate a new token with extended expiry
+        var newToken = _jwtTokenGenerator.GenerateToken(user); // This will use the 2-hour expiry
+        var newExpiry = DateTime.UtcNow.AddHours(2); // Match the expiry in JwtTokenGenerator
+
+        return new RefreshTokenResponse(newToken, newExpiry);
+    }
 }

@@ -3,6 +3,7 @@ using SPS.Application.DTOs;
 using SPS.Application.Services;
 using SPS.Infrastructure.Persistence;
 using SPS.Infrastructure.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SPS.Api.Controllers;
 
@@ -37,6 +38,21 @@ public class AuthController : ControllerBase
         try
         {
             var response = await _authService.LoginAsync(request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(ex.Message);
+        }
+    }
+
+    [HttpPost("refresh-token")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    {
+        try
+        {
+            var response = await _authService.RefreshTokenAsync(request);
             return Ok(response);
         }
         catch (UnauthorizedAccessException ex)
