@@ -1,0 +1,87 @@
+/* General App styles */
+.App {
+  padding: 20px;
+}
+
+/* Page specific styles */
+.login-page,
+.register-page,
+.dashboard-page {
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: 40px auto;
+}
+
+.login-page h1,
+.register-page h1,
+.dashboard-page h1 {
+  margin-bottom: 20px;
+  color: #34495e;
+}
+
+/* File Upload Component styles */
+.file-upload-component {
+  margin-top: 30px;
+  padding: 20px;
+  background-color: #e8f4f8;
+  border-radius: 8px;
+  border: 1px dashed #b3e0ff;
+}
+
+.file-upload-component h2 {
+  color: #2980b9;
+  margin-bottom: 15px;
+}
+
+.file-upload-component input[type="file"] {
+  border: 1px solid #a7d9f2;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.secure-link-display {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #d4edda;
+  border: 1px solid #28a745;
+  border-radius: 5px;
+  word-break: break-all;
+}
+
+.secure-link-display p {
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  color: #28a745;
+}
+
+.secure-link-display a {
+  color: #007bff;
+  text-decoration: underline;
+  margin-right: 10px;
+}
+
+/* Dashboard styles */
+.dashboard-page ul {
+  list-style: none;
+  padding: 0;
+}
+
+.dashboard-page li {
+  background-color: #f8f9fa;
+  border: 1px solid #e2e6ea;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  border-radius: 5px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-page li span {
+  font-weight: bold;
+}
