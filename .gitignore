@@ -127,6 +127,7 @@ SPS.Api/bin/
 SPS.Api/obj/
 SPS.Api/logs/
 SPS.Api/appsettings.Development.json
+SPS.Api/appsettings.json # Added to ignore production appsettings
 SPS.Api/Properties/launchSettings.json
 SPS.Api/*.user
 
@@ -138,7 +139,6 @@ SPS.Core/obj/
 
 SPS.Infrastructure/bin/
 SPS.Infrastructure/obj/
-SPS.Infrastructure/Migrations/*.Designer.cs # Keep initial migration, ignore subsequent designer files
 SPS.Infrastructure/Migrations/*.cs # To ignore all migration files, uncomment this and remove the line above
 SPS.Infrastructure/SpsDbContextModelSnapshot.cs
 
@@ -146,6 +146,7 @@ SPS.PrintConnector/bin/
 SPS.PrintConnector/obj/
 SPS.PrintConnector/config.json
 SPS.PrintConnector/appsettings.Development.json
+SPS.PrintConnector/appsettings.json # Added to ignore production appsettings
 SPS.PrintConnector/Properties/launchSettings.json
 SPS.PrintConnector/*.user
 
