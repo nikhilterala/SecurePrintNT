@@ -158,3 +158,19 @@ SPS.PrintConnector/*.user
 # Windows
 Thumbs.db
 Desktop.ini
+
+# .NET configs
+appsettings.json
+appsettings.*.json
+
+# Secrets
+*.secret.json
+*.secret.env
+*.secret.txt
+*.secret.yaml
+*.secret.yml
+*.secret.ini
+*.secret.config
+*.secret.properties
+*.secret.xml
+*.secret.json
