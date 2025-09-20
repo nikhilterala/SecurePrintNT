@@ -41,8 +41,6 @@ public class PrintConnectorsController : ControllerBase
             return Unauthorized("Owner not authenticated or user ID invalid.");
         }
 
-        _logger.LogInformation("Owner user ID: {OwnerUserId}", ownerUserId);
-
         // Check if a connector with this MachineName already exists for this user
         var existingConnector = await _context.PrintConnectors
             .FirstOrDefaultAsync(pc => pc.OwnerUserId == ownerUserId && pc.MachineName == request.MachineName);
@@ -107,7 +105,6 @@ public class PrintConnectorsController : ControllerBase
         }
 
         var token = authorizationHeader.Substring("Bearer ".Length).Trim();
-        _logger.LogInformation("Attempting to validate token for ConnectorId: {ConnectorId}", request.ConnectorId);
 
         var principal = _jwtTokenGenerator.GetPrincipalFromToken(token);
 
@@ -173,22 +170,20 @@ public class PrintConnectorsController : ControllerBase
 
         foreach (var connector in allConnectors)
         {
-            _logger.LogInformation("Checking cache for printers from connector {ConnectorId} in GetAvailableConnectors.", connector.Id);
             if (_memoryCache.TryGetValue($"Printers:{connector.Id}", out List<PrinterInfoDto>? printers))
             {
                 if (printers != null && printers.Any())
                 {
-                    _logger.LogInformation("Found {PrinterCount} printers in cache for connector {ConnectorId} in GetAvailableConnectors.", printers.Count, connector.Id);
                     activeConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, printers));
                 }
                 else
                 {
-                    _logger.LogInformation("No printers or empty list found in cache for connector {ConnectorId} in GetAvailableConnectors.", connector.Id);
+                    _logger.LogWarning("No printers or empty list found in cache for connector {ConnectorId} in GetAvailableConnectors.", connector.Id);
                 }
             }
             else
             {
-                _logger.LogInformation("Cache entry not found for connector {ConnectorId} in GetAvailableConnectors.", connector.Id);
+                _logger.LogWarning("Cache entry not found for connector {ConnectorId} in GetAvailableConnectors.", connector.Id);
             }
         }
 

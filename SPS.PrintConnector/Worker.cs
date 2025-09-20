@@ -32,7 +32,7 @@ public class Worker : BackgroundService
     public Guid ConnectorId => _connectorId;
 
     private string? _jwtToken; // Made nullable
-    private const string ConfigFilePath = "config.json";
+    private readonly string ConfigFilePath; // Changed to readonly field
 
     public Worker(ILogger<Worker> logger, IConfiguration configuration, HttpClient httpClient, IMemoryCache memoryCache) // Add IMemoryCache to constructor
     {
@@ -40,6 +40,13 @@ public class Worker : BackgroundService
         _configuration = configuration;
         _httpClient = httpClient;
         _memoryCache = memoryCache; // Assign it
+        
+        // Initialize ConfigFilePath for production deployment
+        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+        var appConfigDirectory = Path.Combine(appDataPath, "SecurePrintConnector");
+        Directory.CreateDirectory(appConfigDirectory); // Ensure the directory exists
+        ConfigFilePath = Path.Combine(appConfigDirectory, "config.json");
+        _logger.LogInformation("Using config file path: {ConfigFilePath}", ConfigFilePath);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -83,6 +90,7 @@ public class Worker : BackgroundService
                         _logger.LogInformation("SignalR HubConnection started. Connection ID: {ConnectionId}", _hubConnection.ConnectionId);
                         await _hubConnection.InvokeAsync("RegisterConnector", _connectorId, stoppingToken);
                         _logger.LogInformation("Connector registered with hub.");
+                        await SendAvailablePrinters(); // Initial send immediately after registration
                     }
 
                     // Keep reporting printers periodically
@@ -282,7 +290,6 @@ public class Worker : BackgroundService
                 if (printerName.ToLower().Contains(keyword))
                 {
                     isVirtualPrinter = true;
-                    _logger.LogInformation("Filtering out virtual printer: {PrinterName}", printerName);
                     break;
                 }
             }
@@ -434,7 +441,6 @@ public class Worker : BackgroundService
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password) || string.IsNullOrEmpty(machineName))
             {
                 _logger.LogError("Email, password, and machine name cannot be empty during setup.");
-                Console.WriteLine("Error: Email, password, and machine name cannot be empty. Please try again.");
                 // Removed Console.In.Peek() loop as it can sometimes cause blocking issues.
                 await Task.Delay(500, stoppingToken); // Short delay to allow console to process error before re-prompt
                 continue;
@@ -452,7 +458,6 @@ public class Worker : BackgroundService
             catch (HttpRequestException httpEx)
             {
                 _logger.LogError(httpEx, "Network error during login for connector setup.");
-                Console.WriteLine($"Error: Could not connect to the backend API at {apiBaseUrl}. Please ensure the SPS.Api backend is running and accessible. ({httpEx.Message})");
                 // Removed Console.In.Peek() loop.
                 await Task.Delay(500, stoppingToken); // Short delay
                 continue;
@@ -460,7 +465,6 @@ public class Worker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for connector setup.");
-                Console.WriteLine("Error: Failed to log in. Please check your email/password and try again.");
                 // Removed Console.In.Peek() loop.
                 await Task.Delay(500, stoppingToken); // Short delay
                 continue;
@@ -470,7 +474,6 @@ public class Worker : BackgroundService
             if (_jwtToken == null)
             {
                 _logger.LogError("Failed to retrieve JWT token after login.");
-                Console.WriteLine("Error: Failed to retrieve JWT token. Please try again.");
                 // Removed Console.In.Peek() loop.
                 await Task.Delay(500, stoppingToken); // Short delay
                 continue;
@@ -491,7 +494,6 @@ public class Worker : BackgroundService
             catch (HttpRequestException httpEx)
             {
                 _logger.LogError(httpEx, "Network error during pairing for connector setup.");
-                Console.WriteLine($"Error: Could not connect to the backend API at {apiBaseUrl}. Please ensure the SPS.Api backend is running and accessible. ({httpEx.Message})");
                 // Removed Console.In.Peek() loop.
                 await Task.Delay(500, stoppingToken); // Short delay
                 continue;
@@ -499,7 +501,6 @@ public class Worker : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during pairing for connector setup.");
-                Console.WriteLine("Error: Failed to pair connector. Please ensure machine name is unique or try again.");
                 // Removed Console.In.Peek() loop.
                 await Task.Delay(500, stoppingToken); // Short delay
                 continue;

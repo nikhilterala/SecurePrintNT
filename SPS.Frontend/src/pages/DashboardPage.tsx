@@ -62,7 +62,7 @@ const DashboardPage: React.FC = () => {
       setPrintJobs(jobsResponse.data);
       setUserFiles(filesResponse.data);
     } catch (error) {
-      console.error('Failed to fetch user files or jobs:', error);
+      // console.error('Failed to fetch user files or jobs:', error); // Removed console.error
     }
   };
 
@@ -125,7 +125,7 @@ const DashboardPage: React.FC = () => {
       setSuccessMessage('File secret updated successfully!');
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Failed to update file secret:', error);
+      // console.error('Failed to update file secret:', error); // Removed console.error
       setSuccessMessage('Failed to update file secret.');
       setShowSuccessModal(true);
     }
@@ -151,8 +151,9 @@ const DashboardPage: React.FC = () => {
       setShowSuccessModal(true);
       setResetUploadFormKey(prevKey => prevKey + 1); // Trigger FileUploadComponent reset
     } catch (error) {
-      console.error('Failed to delete file:', error);
-      alert('Failed to delete file.');
+      // console.error('Failed to delete file:', error); // Removed console.error
+      setSuccessMessage('Failed to delete file.'); // Use success modal for error message
+      setShowSuccessModal(true);
     } finally {
       setShowDeleteModal(false);
       setFileToDeleteId(null);

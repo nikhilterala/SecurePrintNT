@@ -21,6 +21,8 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
   const [fileError, setFileError] = useState<string | null>(null);
   const [secretError, setSecretError] = useState<string | null>(null);
   const [confirmSecretError, setConfirmSecretError] = useState<string | null>(null);
+  const [showUploadErrorModal, setShowUploadErrorModal] = useState(false); // New state for upload error modal
+  const [uploadErrorMessage, setUploadErrorMessage] = useState(''); // New state for upload error message
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7192';
 
@@ -51,13 +53,17 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
     setFileError(null);
     setSecretError(null);
     setConfirmSecretError(null);
+    setUploadErrorMessage(''); // Clear previous upload error message
+    setShowUploadErrorModal(false); // Hide previous upload error modal
 
     if (!selectedFile) {
       setFileError('Please select a file first!');
       return;
     }
     if (!token) {
-      alert('You must be logged in to upload files.'); // Keep this as alert as it's a general auth issue
+      // alert('You must be logged in to upload files.'); // Replaced with modal
+      setUploadErrorMessage('You must be logged in to upload files.');
+      setShowUploadErrorModal(true);
       return;
     }
 
@@ -90,11 +96,8 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
         },
       });
 
-      const fileId = uploadResponse.data.id;
-      console.log('File uploaded, FileId:', fileId);
-
       // Create print job
-      const jobResponse = await axios.post(`${API_BASE_URL}/api/jobs`, { fileId }, {
+      const jobResponse = await axios.post(`${API_BASE_URL}/api/jobs`, { fileId: uploadResponse.data.id }, { // Use uploadResponse.data.id directly
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -104,8 +107,9 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
       onFileUploadSuccess();
 
     } catch (error) {
-      console.error('Upload or job creation failed:', error);
-      alert('Failed to upload file or create print job.');
+      // alert('Failed to upload file or create print job.'); // Replaced with modal
+      setUploadErrorMessage('Failed to upload file or create print job.');
+      setShowUploadErrorModal(true);
     } finally {
       setUploading(false);
       setSelectedFile(null);
@@ -185,13 +189,13 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
         {confirmSecretError && <p style={{ color: 'var(--error-color)', fontSize: '0.8em', marginTop: '0.5rem' }}>{confirmSecretError}</p>}
       </div>
 
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
-        <button onClick={handleGenerateRandomSecret} className="button-link" style={{ backgroundColor: 'var(--secondary-color)', color: 'var(--primary-color)', padding: '8px 12px', fontSize: '0.8em' }}>Generate Random Secret</button>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
+        <button onClick={handleGenerateRandomSecret} className="button-link" style={{ backgroundColor: 'var(--secondary-color)', color: 'var(--primary-color)', padding: '8px 12px', fontSize: '0.8em', flexGrow: 1, marginRight: '10px' }}>Generate Random Secret</button>
+        <button onClick={handleUpload} disabled={!selectedFile || uploading} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)', flexGrow: 1 }}>
+          {uploading ? 'Uploading...' : 'Upload & Create Print Job'}
+        </button>
       </div>
-
-      <button onClick={handleUpload} disabled={!selectedFile || uploading} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
-        {uploading ? 'Uploading...' : 'Upload & Create Print Job'}
-      </button>
+      {/* The secure link display remains below these buttons */}
       {secureLink && (
         <div className="secure-link-display" style={{ maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
           <p style={{ color: 'var(--primary-color)' }}>Secure Print Link:</p>
@@ -201,6 +205,31 @@ const FileUploadComponent: React.FC<FileUploadComponentProps> = ({ onFileUploadS
       )}
 
       {/* Removed File Secret display after upload as per user request */}
+      {/* Generic Error Modal for Upload Component */}
+      {showUploadErrorModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="form-card" style={{ maxWidth: '400px', padding: '2rem', backgroundColor: 'var(--card-background)', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: 'var(--error-color)', marginBottom: '1.5rem' }}>Upload Error</h3>
+            <p style={{ color: 'var(--light-text-color)', marginBottom: '1.5rem' }}>
+              {uploadErrorMessage}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowUploadErrorModal(false)} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)' }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

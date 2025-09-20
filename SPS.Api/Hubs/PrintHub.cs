@@ -52,10 +52,9 @@ public class PrintHub : Hub
             throw new HubException($"Unknown PrintConnector ID: {request.PrintConnectorId}. Please re-pair your worker.");
         }
 
-        _logger.LogInformation("Received printer report from connector {ConnectorId} with {PrinterCount} printers. Details: {PrinterNames}", 
+        _logger.LogInformation("Received printer report from connector {ConnectorId} with {PrinterCount} printers.", 
                                request.PrintConnectorId, 
-                               request.AvailablePrinters.Count, 
-                               string.Join(", ", request.AvailablePrinters.Select(p => p.Name)));
+                               request.AvailablePrinters.Count);
 
         _memoryCache.Set($"Printers:{request.PrintConnectorId}", request.AvailablePrinters, CacheEntryLifetime);
     }

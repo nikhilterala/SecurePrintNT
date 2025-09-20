@@ -115,17 +115,15 @@ public class JobsController : ControllerBase
 
         if (request.LocalConnectorId.HasValue && request.LocalConnectorId.Value != Guid.Empty)
         {
-            _logger.LogInformation("Frontend provided LocalConnectorId: {LocalConnectorId}. Attempting to find this specific connector.", request.LocalConnectorId.Value);
             var localConnector = await _context.PrintConnectors
                                                 .FirstOrDefaultAsync(pc => pc.Id == request.LocalConnectorId.Value);
             if (localConnector != null)
             {
                 relevantConnectors.Add(localConnector);
-                _logger.LogInformation("Found matching local connector: {LocalConnectorId}.", request.LocalConnectorId.Value);
             }
             else
             {
-                _logger.LogInformation("LocalConnectorId {LocalConnectorId} provided, but no matching connector found in DB.", request.LocalConnectorId.Value);
+                _logger.LogWarning("LocalConnectorId {LocalConnectorId} provided, but no matching connector found in DB.", request.LocalConnectorId.Value);
             }
         }
         else
@@ -134,20 +132,17 @@ public class JobsController : ControllerBase
         }
 
         // Now process only the relevantConnectors (which might be empty or contain one local connector).
-        _logger.LogInformation("Processing {RelevantConnectorCount} relevant print connectors.", relevantConnectors.Count);
 
         foreach (var connector in relevantConnectors)
         {
-            _logger.LogInformation("Checking cache for printers from connector {ConnectorId}.", connector.Id);
             if (_memoryCache.TryGetValue($"Printers:{connector.Id}", out List<PrinterInfoDto>? printers))
             {
                 var currentPrinters = (printers ?? new List<PrinterInfoDto>());
                 availableConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, currentPrinters));
-                _logger.LogInformation("Connector {0} reported {1} printers. Adding to available connectors.", connector.Id, currentPrinters.Count);
             }
             else
             {
-                _logger.LogInformation("Cache entry not found for connector {ConnectorId}. Not adding to available connectors (implies worker not active/reporting).", connector.Id);
+                _logger.LogWarning("Cache entry not found for connector {ConnectorId}. Not adding to available connectors (implies worker not active/reporting).", connector.Id);
             }
         }
         _logger.LogInformation("Final count of available connectors to return: {AvailableConnectorCount}.", availableConnectors.Count);

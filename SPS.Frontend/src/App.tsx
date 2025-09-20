@@ -6,6 +6,8 @@ function App() {
   const { token, logout } = useAuth();
   const navigate = useNavigate();
   const [accessFileToken, setAccessFileToken] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false); // New state for error modal visibility
+  const [errorMessage, setErrorMessage] = useState(''); // New state for error message
 
   const handleAccessFile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +18,9 @@ function App() {
 
       navigate(`/print/${tokenToNavigate}`);
     } else {
-      alert('Please enter the Secure Link.');
+      // alert('Please enter the Secure Link.'); // Replaced with modal
+      setErrorMessage('Please enter the Secure Link.');
+      setShowErrorModal(true);
     }
   };
 
@@ -30,10 +34,10 @@ function App() {
   return (
     <div className="App" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--dark-background)' }}>
       <header className="app-header">
-        <Link to="/" style={{ textDecoration: 'none', marginLeft: '23px' }}>
+        <Link to="/" style={{ textDecoration: 'none' }}>
           <h1 className="app-header-title">Secure Print</h1>
         </Link>
-        <nav className="app-header-nav">
+        <nav className="app-header-nav" style={{marginRight: '35px'}}>
           {!token ? (
             <>
               <Link to="/login" className="button-link">Login</Link>
@@ -129,6 +133,31 @@ function App() {
       <footer style={{ padding: '2.5rem', textAlign: 'center', backgroundColor: 'var(--dark-background)', color: 'var(--text-color)', marginTop: '0', width: '100%' }}>
         <p>&copy; {new Date().getFullYear()} Secure Print Service by Nikhil. All rights reserved.</p>
       </footer>
+      {/* Generic Error Modal */}
+      {showErrorModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="form-card" style={{ maxWidth: '400px', padding: '2rem', backgroundColor: 'var(--card-background)', borderRadius: '12px', boxShadow: '0 5px 15px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ color: 'var(--error-color)', marginBottom: '1.5rem' }}>Error</h3>
+            <p style={{ color: 'var(--light-text-color)', marginBottom: '1.5rem' }}>
+              {errorMessage}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowErrorModal(false)} className="button-link" style={{ backgroundColor: 'var(--accent-color)', color: 'var(--dark-background)' }}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
