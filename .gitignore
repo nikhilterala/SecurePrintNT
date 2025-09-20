@@ -139,17 +139,19 @@ SPS.Core/obj/
 
 SPS.Infrastructure/bin/
 SPS.Infrastructure/obj/
-SPS.Infrastructure/Migrations/*.cs # To ignore all migration files, uncomment this and remove the line above
+SPS.Infrastructure/Migrations
 SPS.Infrastructure/SpsDbContextModelSnapshot.cs
 
 SPS.PrintConnector/bin/
 SPS.PrintConnector/obj/
 SPS.PrintConnector/config.json
 SPS.PrintConnector/appsettings.Development.json
-SPS.PrintConnector/appsettings.json # Added to ignore production appsettings
+SPS.PrintConnector/appsettings.json 
 SPS.PrintConnector/Properties/launchSettings.json
 SPS.PrintConnector/*.user
 
+.json
+.env
 # MacOS
 .DS_Store
 
