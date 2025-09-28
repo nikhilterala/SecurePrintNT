@@ -23,13 +23,22 @@ public class PrintHub : Hub
         _logger = logger;
     }
 
-    public async Task RegisterConnector(Guid connectorId)
+    public async Task RegisterConnector(Guid connectorId, string? localApiBaseUrl)
     {
         var connector = await _context.PrintConnectors.FirstOrDefaultAsync(pc => pc.Id == connectorId);
         if (connector == null)
         {
             _logger.LogWarning("Attempt to register with unknown ConnectorId: {ConnectorId}. Rejecting.", connectorId);
             throw new HubException($"Unknown PrintConnector ID: {connectorId}. Please re-pair your worker.");
+        }
+
+        // Update the PrintConnector entity with the latest LocalApiBaseUrl
+        if (connector.LocalApiBaseUrl != localApiBaseUrl)
+        {
+            var updatedConnector = connector with { LocalApiBaseUrl = localApiBaseUrl, LastActivity = DateTime.UtcNow, IsActive = true };
+            _context.Entry(connector).CurrentValues.SetValues(updatedConnector);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Updated LocalApiBaseUrl for connector {ConnectorId} to {LocalApiBaseUrl}", connectorId, localApiBaseUrl);
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, connectorId.ToString());

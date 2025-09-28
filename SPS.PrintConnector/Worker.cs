@@ -32,6 +32,7 @@ public class Worker : BackgroundService
     public Guid ConnectorId => _connectorId;
 
     private string? _jwtToken; // Made nullable
+    private string? _localApiBaseUrl; // New field to store the worker's local API URL
     private readonly string ConfigFilePath; // Changed to readonly field
 
     public Worker(ILogger<Worker> logger, IConfiguration configuration, HttpClient httpClient, IMemoryCache memoryCache) // Add IMemoryCache to constructor
@@ -88,7 +89,8 @@ public class Worker : BackgroundService
                         _logger.LogInformation("SignalR HubConnection is disconnected. Attempting to start...");
                         await _hubConnection.StartAsync(stoppingToken);
                         _logger.LogInformation("SignalR HubConnection started. Connection ID: {ConnectionId}", _hubConnection.ConnectionId);
-                        await _hubConnection.InvokeAsync("RegisterConnector", _connectorId, stoppingToken);
+                        // *** New: Pass LocalApiBaseUrl during registration ***
+                        await _hubConnection.InvokeAsync("RegisterConnector", _connectorId, _localApiBaseUrl, stoppingToken);
                         _logger.LogInformation("Connector registered with hub.");
                         await SendAvailablePrinters(); // Initial send immediately after registration
                     }
@@ -241,9 +243,9 @@ public class Worker : BackgroundService
         {
             _logger.LogInformation("Connection reconnected: {ConnectionId}", connectionId);
             // Re-register connector after reconnect
-            if (hubConnection != null && _connectorId != Guid.Empty)
+            if (hubConnection != null && _connectorId != Guid.Empty && !string.IsNullOrEmpty(_localApiBaseUrl))
             {
-                _ = hubConnection.InvokeAsync("RegisterConnector", _connectorId, stoppingToken);
+                _ = hubConnection.InvokeAsync("RegisterConnector", _connectorId, _localApiBaseUrl, stoppingToken);
                 _ = SendAvailablePrinters(); // Call to send available printers
             }
             return Task.CompletedTask;
@@ -341,6 +343,7 @@ public class Worker : BackgroundService
 
         _connectorId = Guid.Empty;
         _jwtToken = null;
+        _localApiBaseUrl = null; // Clear local API URL on invalidation
 
         // Explicitly stop and dispose the current hub connection
         if (_hubConnection != null)
@@ -373,6 +376,14 @@ public class Worker : BackgroundService
                 {
                     _connectorId = config.PrintConnectorId;
                     _jwtToken = config.JwtToken;
+                    // *** New: Load LocalApiBaseUrl from config ***
+                    _localApiBaseUrl = config.LocalApiBaseUrl ?? _configuration["Urls"]; // Fallback to appsettings if not in config
+                    if (!string.IsNullOrEmpty(_localApiBaseUrl))
+                    {
+                        _logger.LogInformation("Loaded LocalApiBaseUrl from config: {LocalApiBaseUrl}", _localApiBaseUrl);
+                    }
+                    // Continue with validation, but we have the URL now.
+
                     _logger.LogInformation("Loaded existing connector config. ConnectorId: {ConnectorId}", _connectorId);
 
                     // *** New: Validate existing config with the backend ***
@@ -506,7 +517,14 @@ public class Worker : BackgroundService
                 continue;
             }
 
-            var configToSave = new ConnectorConfig(_connectorId, _jwtToken);
+            // Retrieve the configured local API URL
+            _localApiBaseUrl = _configuration["Urls"];
+            if (string.IsNullOrEmpty(_localApiBaseUrl))
+            {
+                _logger.LogWarning("Worker 'Urls' configuration not found. Local API URL will not be reported to backend.");
+            }
+
+            var configToSave = new ConnectorConfig(_connectorId, _jwtToken, _localApiBaseUrl);
             await System.IO.File.WriteAllTextAsync(ConfigFilePath, JsonConvert.SerializeObject(configToSave), stoppingToken);
             _logger.LogInformation("New connector paired and config saved. ConnectorId: {ConnectorId}", _connectorId);
             setupSuccessful = true; // Mark as successful to exit the loop
@@ -514,4 +532,4 @@ public class Worker : BackgroundService
     }
 }
 
-public record ConnectorConfig(Guid PrintConnectorId, string JwtToken);
+public record ConnectorConfig(Guid PrintConnectorId, string JwtToken, string? LocalApiBaseUrl);

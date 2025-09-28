@@ -1,7 +1,6 @@
+using SPS.Application.DTOs;
 
 public record PrintJobRequest(Guid FileId, Guid? AssignedConnectorId);
-
-public record PrinterInfoDto(string Name, bool IsDefault);
 
 public record PrintJobReceivedDto(Guid JobId, string FileSasUrl);
 

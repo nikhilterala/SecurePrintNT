@@ -30,9 +30,9 @@ public class PrintConnectorsController : ControllerBase
     }
 
     [HttpPost("pair")]
-    public async Task<IActionResult> Pair([FromBody] PairingRequest request)
+    public async Task<IActionResult> Pair([FromBody] RegisterPrintConnectorRequest request)
     {
-        _logger.LogInformation("Pair endpoint invoked with MachineName: {MachineName}", request.MachineName);
+        _logger.LogInformation("Pair endpoint invoked for connector Name: {Name}, LocalApiBaseUrl: {LocalApiBaseUrl}", request.Name, request.LocalApiBaseUrl);
 
         var ownerUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
         if (ownerUserIdClaim == null || !Guid.TryParse(ownerUserIdClaim.Value, out var ownerUserId))
@@ -43,27 +43,38 @@ public class PrintConnectorsController : ControllerBase
 
         // Check if a connector with this MachineName already exists for this user
         var existingConnector = await _context.PrintConnectors
-            .FirstOrDefaultAsync(pc => pc.OwnerUserId == ownerUserId && pc.MachineName == request.MachineName);
+            .FirstOrDefaultAsync(pc => pc.OwnerUserId == ownerUserId && pc.MachineName == request.Name);
 
         PrintConnector printConnector;
 
         if (existingConnector != null)
         {
-            // Update existing connector's LastActivity and re-generate token
-            existingConnector = existingConnector with { LastActivity = DateTime.UtcNow, IsActive = true };
-            // No explicit _context.Update needed for tracked entity when using 'with' on record if its reference changes
-            // Ensure the DbContext tracks the *updated* instance if the 'with' expression creates a new reference
-            // Or, more reliably, modify the existing tracked entity directly.
+            // Update existing connector's LastActivity, Description, LocalApiBaseUrl, and re-generate token
+            existingConnector = existingConnector with {
+                LastActivity = DateTime.UtcNow,
+                IsActive = true,
+                Description = request.Description,
+                LocalApiBaseUrl = request.LocalApiBaseUrl
+            };
             _context.Entry(existingConnector).CurrentValues.SetValues(existingConnector); // Re-assign values from the new record instance to the tracked entry.
             printConnector = existingConnector; // Use the updated entity for token generation
-            _logger.LogInformation("Updating existing connector {ConnectorId} with MachineName: {MachineName}", printConnector.Id, printConnector.MachineName);
+            _logger.LogInformation("Updating existing connector {ConnectorId} with Name: {Name}", printConnector.Id, printConnector.MachineName);
         }
         else
         {
             // Create a new connector
-            printConnector = new PrintConnector(Guid.NewGuid(), ownerUserId, request.MachineName, DateTime.UtcNow, DateTime.UtcNow, true);
+            printConnector = new PrintConnector(
+                Guid.NewGuid(),
+                ownerUserId,
+                request.Name,
+                request.Description,
+                request.LocalApiBaseUrl,
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                true
+            );
             _context.PrintConnectors.Add(printConnector);
-            _logger.LogInformation("Creating new connector {ConnectorId} with MachineName: {MachineName}", printConnector.Id, printConnector.MachineName);
+            _logger.LogInformation("Creating new connector {ConnectorId} with Name: {Name}", printConnector.Id, printConnector.MachineName);
         }
 
         try
@@ -174,7 +185,7 @@ public class PrintConnectorsController : ControllerBase
             {
                 if (printers != null && printers.Any())
                 {
-                    activeConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, printers));
+                    activeConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, connector.LocalApiBaseUrl, printers));
                 }
                 else
                 {

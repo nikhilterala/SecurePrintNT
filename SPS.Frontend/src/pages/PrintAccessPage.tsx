@@ -10,13 +10,12 @@ const PrintAccessPage: React.FC = () => {
   const [secret, setSecret] = useState('');
   const [message, setMessage] = useState('Please enter your Secure Link and Secret to access your print job.');
   const [fileContentUrl, setFileContentUrl] = useState<string | null>(null);
-  const [availableConnectors, setAvailableConnectors] = useState<Array<{ id: string; machineName: string; printers: Array<{ name: string; isDefault: boolean }> }>>([]); // Changed 'Name' to 'name'
+  const [availableConnectors, setAvailableConnectors] = useState<Array<{ id: string; machineName: string; printers: Array<{ name: string; isDefault: boolean }>; localApiBaseUrl?: string | null }>>([]); // Changed 'Name' to 'name'
   const [selectedPrinter, setSelectedPrinter] = useState<string>('');
   const [showPrinterSelection, setShowPrinterSelection] = useState<boolean>(false);
   const [workerDownloadLink, setWorkerDownloadLink] = useState<string | null>(null);
   const [jobToken, setJobToken] = useState<string | null>(null); // New state to store the token for the current job
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://localhost:7192';
-  const LOCAL_WORKER_API_BASE_URL = 'http://localhost:5000'; // Assuming worker runs on port 5000
   const { token: authToken, logout } = useAuth(); // Get auth token and logout function
   const [isAccessingJob, setIsAccessingJob] = useState(false); // New state for loading indicator
   const [isPrinting, setIsPrinting] = useState(false); // New state for loading indicator
@@ -57,8 +56,13 @@ const PrintAccessPage: React.FC = () => {
     setPollAttempts(prev => prev + 1);
     
     let currentLocalConnectorId: string | null = null;
+    // Use the localApiBaseUrl from the first available connector, or fall back to a default if not yet known.
+    const localWorkerApiBaseUrl = availableConnectors.length > 0 && availableConnectors[0].localApiBaseUrl 
+                                  ? availableConnectors[0].localApiBaseUrl 
+                                  : 'http://localhost:5080'; // Fallback to the new default port
+
     try {
-      const workerResponse = await axios.get(`${LOCAL_WORKER_API_BASE_URL}/api/worker-info`);
+      const workerResponse = await axios.get(`${localWorkerApiBaseUrl}/api/worker-info`);
       if (workerResponse.data && workerResponse.data.connectorId) {
         currentLocalConnectorId = workerResponse.data.connectorId;
       }
@@ -76,7 +80,7 @@ const PrintAccessPage: React.FC = () => {
       const response = await axios.post(`${API_BASE_URL}/api/jobs/access-print-job/${jobToken}`, payload); // Use jobToken from state
       
       if (response.data.availableConnectors && response.data.availableConnectors.length > 0) {
-        setAvailableConnectors(response.data.availableConnectors);
+        setAvailableConnectors(response.data.availableConnectors.map((conn: any) => ({ ...conn, localApiBaseUrl: conn.localApiBaseUrl || localWorkerApiBaseUrl })));
         const allPrinters = response.data.availableConnectors.flatMap((conn: { printers: any; }) => conn.printers);
         if (allPrinters.length > 0) {
           const defaultPrinterOption = allPrinters.find((p: { isDefault: boolean; }) => p.isDefault) || allPrinters[0];
@@ -84,6 +88,7 @@ const PrintAccessPage: React.FC = () => {
           setSelectedPrinter(JSON.stringify({
             connectorId: selectedConn?.id || '',
             printerName: defaultPrinterOption.name, // Changed defaultPrinterOption.Name to .name
+            connectorName: selectedConn?.machineName || '', // Include connectorName
           }));
           setShowPrinterSelection(true);
           setMessage(response.data.message || 'Your file is ready for printing.');
@@ -130,10 +135,15 @@ const PrintAccessPage: React.FC = () => {
 
     setIsAccessingJob(true); // Start loading for job access
     let currentLocalConnectorId: string | null = null;
+    let localWorkerApiBaseUrlFromBackend: string | null = null; // New variable
+
+    // IMPORTANT: Temporarily use hardcoded local port for initial worker check,
+    // as we haven't received backend's LocalApiBaseUrl yet.
+    const initialLocalWorkerUrl = 'http://localhost:5080'; // Use the new default port
 
     try {
       // Attempt to detect local worker ID directly before making the main API call
-      const workerResponse = await axios.get(`${LOCAL_WORKER_API_BASE_URL}/api/worker-info`);
+      const workerResponse = await axios.get(`${initialLocalWorkerUrl}/api/worker-info`);
       if (workerResponse.data && workerResponse.data.connectorId) {
         currentLocalConnectorId = workerResponse.data.connectorId;
       }
@@ -156,7 +166,10 @@ const PrintAccessPage: React.FC = () => {
       }
 
       if (response.data.availableConnectors && response.data.availableConnectors.length > 0) {
-        setAvailableConnectors(response.data.availableConnectors);
+        // *** New: Store localApiBaseUrl from backend response ***
+        localWorkerApiBaseUrlFromBackend = response.data.availableConnectors[0]?.localApiBaseUrl || null;
+
+        setAvailableConnectors(response.data.availableConnectors.map((conn: any) => ({ ...conn, localApiBaseUrl: conn.localApiBaseUrl || initialLocalWorkerUrl })));
         const allPrinters = response.data.availableConnectors.flatMap((conn: { printers: any; }) => conn.printers);
         if (allPrinters.length > 0) {
           const defaultPrinterOption = allPrinters.find((p: { isDefault: boolean; }) => p.isDefault) || allPrinters[0];
@@ -164,6 +177,7 @@ const PrintAccessPage: React.FC = () => {
           setSelectedPrinter(JSON.stringify({
             connectorId: selectedConn?.id || '',
             printerName: defaultPrinterOption.name, // Changed defaultPrinterOption.Name to .name
+            connectorName: selectedConn?.machineName || '', // Include connectorName
           }));
           setShowPrinterSelection(true);
           // Polling check moved here: if successful, stop polling
@@ -171,12 +185,17 @@ const PrintAccessPage: React.FC = () => {
             setIsPollingForPrinters(false);
             setMessage(response.data.message || 'Printers found. Your file is ready for printing.');
           }
+        } else if (!response.data.fileSasUrl && (!response.data.availableConnectors || response.data.availableConnectors.length === 0)) {
+            setMessage('Searching for local print connectors and printers...');
+            setIsPollingForPrinters(true);
+            setPollAttempts(0); // Reset attempts
+            // Store the localApiBaseUrl received from backend in state for polling to use
+            if (localWorkerApiBaseUrlFromBackend) {
+                setAvailableConnectors(prev => prev.map(conn => 
+                    conn.id === currentLocalConnectorId ? { ...conn, localApiBaseUrl: localWorkerApiBaseUrlFromBackend } : conn
+                ));
+            }
         }
-      } else if (!response.data.fileSasUrl && (!response.data.availableConnectors || response.data.availableConnectors.length === 0)) {
-        // If direct access is NOT allowed and no connectors are found, initiate polling
-        setMessage('Searching for local print connectors and printers...');
-        setIsPollingForPrinters(true);
-        setPollAttempts(0); // Reset attempts
       }
 
       if (response.data.message) {

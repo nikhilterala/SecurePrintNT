@@ -138,7 +138,7 @@ public class JobsController : ControllerBase
             if (_memoryCache.TryGetValue($"Printers:{connector.Id}", out List<PrinterInfoDto>? printers))
             {
                 var currentPrinters = (printers ?? new List<PrinterInfoDto>());
-                availableConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, currentPrinters));
+                availableConnectors.Add(new AvailableConnectorDto(connector.Id, connector.MachineName, connector.LocalApiBaseUrl, currentPrinters));
             }
             else
             {
