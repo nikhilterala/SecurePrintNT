@@ -42,3 +42,8 @@ To run the Secure Print application, you will typically need to set up the follo
 3.  **Print Connector Worker:** A local service that runs on the print machine to discover and communicate with local printers.
 
 Detailed technical setup instructions would be provided in a separate `CONTRIBUTING.md` or similar document.
+
+## Copyright
+© 2026 Nikhil Terala. All rights reserved.
+This project is not open source. No part of this code may be used, copied, modified, or distributed without explicit written permission
+from the author.
